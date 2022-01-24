@@ -1,0 +1,26 @@
+@startuml
+
+' %set_variable_value("RELATIVE_INCLUDE", ".")
+
+!include <C4/C4_Container>
+!include ../includes/text.iuml
+!include ../includes/relation.iuml
+
+Container(foo, "Foo", "technology")
+Container(bar, "Bar", "technology")
+Container_Ext(ext_a, "Ext A", "technology")
+Container_Ext(ext_b, "Ext B", "technology")
+
+' ----------------------------------------------------------------------------
+' 2 different ways to render JSON relationship data
+' ----------------------------------------------------------------------------
+' 1) Pre-defined variable
+!$mydata={"fruit": "Pear", "size": "Medium", "color": "Pink"}
+Rel(foo, ext_b, "My Label", $meta=$mydata)
+
+' 2) Inline -- Notice the outer single-quotes. These are necessary.
+' Rel(a, b, "My Label", $meta='{"fruit": "Apple", "size": "Large", "colors": ["Red", "Pink"]}')
+Rel(foo, ext_a, "My Label", "My Stereo", "My Foo", $meta='{"fruit": "Apple", "size": "Large", "colors": "Red,Pink"}')
+RelIndex(5, bar, ext_b, "label", "technology")
+
+@enduml

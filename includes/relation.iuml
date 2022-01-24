@@ -1,0 +1,280 @@
+@startuml
+
+!include text.iuml
+
+' ####################################################################
+' Styles
+' ####################################################################
+
+!global $TECHN_FONT_SIZE = 12
+!global $DESCR_FONT_SIZE = 10
+
+skinparam Padding 0
+skinparam BoxPadding 0
+skinparam Margin 0
+
+' ####################################################################
+' Index
+' ####################################################################
+
+' Scope: Interactions in an enterprise, software system or container.
+' Primary and supporting elements: Depends on the diagram scope -
+'     enterprise - people and software systems Related to the enterprise in scope
+'     software system - see system context or container diagrams,
+'     container - see component diagram.
+' Intended audience: Technical and non-technical people, inside and outside of the software development team.
+
+' Dynamic diagram introduces (automatically) numbered interactions:
+'     (lowercase) increment($offset=1): increase current index (procedure which has no direct output)
+'     (lowercase) setIndex($new_index): set the new index (procedure which has no direct output)
+'
+'     (Uppercase) LastIndex(): return the last used index (function which can be used as argument)
+'     (Uppercase) Index($offset=1): returns current index and calculates next index (function which can be used as argument)
+'     (Uppercase) SetIndex($new_index): returns new set index and calculates next index (function which can be used as argument)
+
+!global $last_rel_index = 0
+!global $rel_index = 1
+
+!procedure increment($offset=1)
+  !$last_rel_index = $rel_index
+  !$rel_index = $rel_index + $offset
+!endprocedure
+
+!procedure setIndex($new_index)
+  !$last_rel_index = $rel_index
+  !$rel_index = $new_index
+!endprocedure
+
+!function Index($offset=1)
+  !$last_rel_index = $rel_index
+  !$rel_index = $last_rel_index + $offset
+  !return $last_rel_index
+!endfunction
+
+!function LastIndex()
+  !return $last_rel_index
+!endfunction
+
+!function SetIndex($new_index, $offset=1)
+  !$last_rel_index = $new_index
+  !$rel_index = $new_index + $offset
+  !return $last_rel_index
+!endfunction
+
+
+' rel specific
+!unquoted function $toStereos($tags)
+  !if (%strlen($tags) == 0)
+    !return ''
+  !endif
+
+  !$stereos = ''
+  !$br_pos = %strpos($tags, "+")
+
+  !while ($br_pos >= 0)
+    !$tag = %substr($tags, 0, $br_pos)
+    !$stereos = $stereos + '<<' + $tag + '>>'
+    %set_variable_value("$" + $tag + "_LineLegend", %true())
+    !$tags = %substr($tags, $br_pos + 1)
+    !$br_pos = %strpos($tags, "+")
+  !endwhile
+
+  !if (%strlen($tags) > 0)
+    !$stereos = $stereos + '<<' + $tags + '>>'
+    %set_variable_value("$" + $tags + "_LineLegend", %true())
+  !endif
+
+  !return $stereos
+!endfunction
+
+
+' if $sprite/$techn is an empty argument, try to calculate it via the defined $tag
+!unquoted function $toRelArg($arg, $tags, $var_postfix)
+  !if ($arg > "")
+    !return $arg
+  !endif
+
+  !if (%strlen($tags) == 0)
+    !return $arg
+  !endif
+
+  !$br_pos = %strpos($tags, "+")
+  !while ($br_pos >= 0)
+    !$tag = %substr($tags, 0, $br_pos)
+    !$new_arg = %get_variable_value("$" + $tag + $var_postfix)
+    !if ($new_arg > "")
+      !return $new_arg
+    !endif
+    !$tags = %substr($tags, $br_pos + 1)
+    !$br_pos = %strpos($tags, "+")
+  !endwhile
+
+  !if (%strlen($tags) > 0)
+    !$new_arg = %get_variable_value("$" + $tags + $var_postfix)
+    !if ($new_arg > "")
+      !return $new_arg
+    !endif
+  !endif
+
+  !return $arg
+!endfunction
+
+
+' Wraps input json in the plantuml json structure with a default styling.
+' To be used w/ the $meta json value for relations.
+!function $getMeta($meta_json)
+  !$result = ''
+  !$result = $result + "\n{{json\n"
+  !$result = $result + "<style>\n"
+  !$result = $result + "node {\n"
+  !$result = $result + "  FontColor gray\n"
+  !$result = $result + "  FontSize 8\n"
+  !$result = $result + "  LineColor #bbbbbb\n"
+  !$result = $result + "  LineThickness 1\n"
+  !$result = $result + "  RoundCorner 2\n"
+  !$result = $result + "  separator {\n"
+  !$result = $result + "    LineColor #bbbbbb\n"
+  !$result = $result + "    LineThickness 0.5\n"
+  !$result = $result + "  }\n"
+  !$result = $result + "}\n"
+  !$result = $result + "</style>\n"
+  !$result = $result + $meta_json
+  !$result = $result + "\n}}\n"
+  !return $result
+!endfunction
+
+
+!function $getRel($direction, $alias1, $alias2, $label, $techn, $descr, $sprite, $tags, $link, $meta)
+  !$sprite = $toRelArg($sprite, $tags, "RelTagSprite")
+  !$techn = $toRelArg($techn, $tags, "RelTagTechn")
+  !$result = $alias1 + ' ' + $direction + ' ' + $alias2
+
+  !if ($tags != "")
+    !$result = $result + ' ' + $toStereos($tags)
+  !endif
+
+  !$result = $result + ' : '
+
+  !if ($sprite != "")
+    !$result = $result + $getSprite($sprite) + ' '
+  !endif
+
+  !if ($link != "")
+    !$result = $result + '**[[' + $link + ' ' + $label + ']]**'
+  !else
+    !$result = $result + '**' + $label + '**'
+  !endif
+
+  !if ($techn != "")
+    ' line break is not deterministic, calculate it
+    !$result = $result + '\n//<size:' + $TECHN_FONT_SIZE + '>[' + $breakTechn($techn, $REL_TECHN_MAX_CHAR_WIDTH) + ']</size>//'
+  !endif
+
+  !if ($meta != "")
+    !$result = $result + $getMeta($meta)
+  !endif
+
+  !if ($descr != "")
+    ' line break is not deterministic, calculate it
+    !$result = $result + '//<size:' + $DESCR_FONT_SIZE + '>' + $breakDescr($descr, $REL_DESCR_MAX_CHAR_WIDTH) + '</size>//'
+  !endif
+
+  !return $result
+!endfunction
+
+
+' Relationship override
+' ##################################
+
+' Relationship
+' ##################################
+
+!unquoted procedure Rel_($e_index, $alias1, $alias2, $label, $direction)
+$alias1 $direction $alias2 : **$e_index: $label**
+!endprocedure
+!unquoted procedure Rel_($e_index, $alias1, $alias2, $label, $techn, $direction)
+$alias1 $direction $alias2 : **$e_index: $label**\n//<size:$TECHN_FONT_SIZE>[$techn]</size>//
+!endprocedure
+
+!unquoted procedure Rel($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel("-->>", $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+
+!unquoted procedure RelIndex($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel("-->>", $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+
+!unquoted procedure Rel_Back($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel("<<--", $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_Back($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel("<<--", $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+
+!unquoted procedure Rel_Neighbor($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel("->>", $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_Neighbor($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel("->>", $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+
+!unquoted procedure Rel_Back_Neighbor($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel("<<-", $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_Back_Neighbor($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel("<<-", $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+
+!unquoted procedure Rel_D($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($down("-","->>"), $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure Rel_Down($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($down("-","->>"), $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_D($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($down("-","->>"), $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_Down($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($down("-","->>"), $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+
+!unquoted procedure Rel_U($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($up("-","->>"), $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure Rel_Up($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($up("-","->>"), $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_U($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($up("-","->>"), $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_Up($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($up("-","->>"), $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+
+!unquoted procedure Rel_L($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($left("-","->>"), $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure Rel_Left($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($left("-","->>"), $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_L($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($left("-","->>"), $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_Left($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($left("-","->>"), $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+
+!unquoted procedure Rel_R($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($right("-","->>"), $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure Rel_Right($from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($right("-","->>"), $from, $to, Index() + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_R($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($right("-","->>"), $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+!unquoted procedure RelIndex_Right($e_index, $from, $to, $label, $techn="", $descr="", $sprite="", $tags="", $link="", $meta="")
+$getRel($right("-","->>"), $from, $to, $e_index + ": " + $label, $techn, $descr, $sprite, $tags, $link, $meta)
+!endprocedure
+
+@enduml

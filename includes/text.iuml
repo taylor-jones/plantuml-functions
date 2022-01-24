@@ -1,0 +1,92 @@
+@startuml
+
+' replaces all instances
+!function $replace($text, $target, $replacement = "") 
+  !$result = ""
+  !$i = 0
+  !$text_index = 0
+  !$text_len = %strlen($text)
+  !$target_len = %strlen($target)
+
+  !while $text_index < $text_len
+    !$value = %substr($text, $i, $target_len)
+
+    !if ($value == $target)
+      !$result = $result + $replacement
+    !else 
+      !$result = $result + $value
+    !endif
+
+    !$i = $i + 1
+    !$text_index = $i + $target_len
+  !endwhile
+
+  !return $result
+!endfunction
+
+
+' left trim
+!function $ltrim($text)
+  !$result = $text
+  !$len = %strlen($text)
+
+  !while $len > 0 && %substr($result, 0, 1) == ' '
+    !$result = %substr($result, 1)
+    !$len = %strlen($result)
+  !endwhile
+
+  !return $result
+!endfunction
+
+
+' right trim
+!function $rtrim($text)
+  !$result = $text
+  !$len = %strlen($result) - 1
+
+  !if ($len > 0)
+    !while $len > 0 && %substr($result, $len) == ' '
+      !$result = %substr($result, 0, $len)
+      !$len = %strlen($result) - 1
+    !endwhile
+  !endif
+
+  !return $result
+!endfunction
+
+
+' left and right trim
+!function $trim($text)
+  !return $ltrim($rtrim($text))
+!endfunction
+
+
+!function $index_of($target, $array)
+  !$i = 0
+  !foreach $val in $array
+    !if ($val == $target)
+      !return $i
+    !endif
+    !$i = $i + 1
+  !endfor
+
+  !return %intval("-1")
+!endfunction
+
+
+!function $join_array($json_arr, $delimiter=',')
+  !$i = 0
+  !$result = ''
+
+  !foreach $val in $json_arr
+    !if ($i > 0)
+      !$result = $result + $delimiter
+    !endif
+    !$result = $result + $val
+    !$i = $i + 1
+  !endfor
+
+  !return $result
+!endfunction
+
+@enduml
